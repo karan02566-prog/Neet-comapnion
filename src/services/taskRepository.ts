@@ -21,4 +21,32 @@ export const taskRepository = {
     const db = await getDB()
     await db.delete('tasks', id)
   },
+
+  async toggleComplete(id: string): Promise<Task | null> {
+    const db = await getDB()
+    const task = await db.get('tasks', id)
+
+    if (!task) {
+      return null
+    }
+
+    const now = new Date().toISOString()
+
+    const updatedTask: Task = {
+      ...task,
+      status:
+        task.status === 'completed'
+          ? 'pending'
+          : 'completed',
+      completedAt:
+        task.status === 'completed'
+          ? undefined
+          : now,
+      updatedAt: now,
+    }
+
+    await db.put('tasks', updatedTask)
+
+    return updatedTask
+  },
 }

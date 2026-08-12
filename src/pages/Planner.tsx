@@ -42,29 +42,20 @@ function Planner() {
     }
   }
 
-  async function handleToggleComplete(task: Task) {
-    const now = new Date().toISOString()
+  async function handleToggleComplete(id: string) {
+    const updatedTask = await taskRepository.toggleComplete(id)
 
-    const updated: Task = {
-      ...task,
-      status:
-        task.status === 'completed'
-          ? 'pending'
-          : 'completed',
-      completedAt:
-        task.status === 'completed'
-          ? undefined
-          : now,
-      updatedAt: now,
+    if (!updatedTask) {
+      return
     }
 
-    await taskRepository.save(updated)
-
     setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? updated : t)),
+      prev.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task,
+      ),
     )
 
-    if (editingId === task.id) {
+    if (editingId === id) {
       resetForm()
     }
   }
@@ -72,16 +63,20 @@ function Planner() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!title.trim() || !date) return
+    if (!title.trim() || !date) {
+      return
+    }
 
     const now = new Date().toISOString()
 
     if (editingId) {
-      const existing = tasks.find((t) => t.id === editingId)
+      const existing = tasks.find((task) => task.id === editingId)
 
-      if (!existing) return
+      if (!existing) {
+        return
+      }
 
-      const updated: Task = {
+      const updatedTask: Task = {
         ...existing,
         title: title.trim(),
         date,
@@ -90,10 +85,12 @@ function Planner() {
         updatedAt: now,
       }
 
-      await taskRepository.save(updated)
+      await taskRepository.save(updatedTask)
 
       setTasks((prev) =>
-        prev.map((t) => (t.id === editingId ? updated : t)),
+        prev.map((task) =>
+          task.id === editingId ? updatedTask : task,
+        ),
       )
     } else {
       const newTask: Task = {
@@ -108,6 +105,7 @@ function Planner() {
       }
 
       await taskRepository.save(newTask)
+
       setTasks((prev) => [...prev, newTask])
     }
 
@@ -116,9 +114,7 @@ function Planner() {
 
   return (
     <div className="px-6 py-10 md:px-10">
-      <h1 className="text-2xl font-bold mb-6">
-        Planner
-      </h1>
+      <h1 className="text-2xl font-bold mb-6">Planner</h1>
 
       <form
         onSubmit={handleSubmit}
@@ -191,27 +187,27 @@ function Planner() {
 
       <div className="flex flex-col gap-3">
         {tasks.length === 0 && (
-          <p className="text-neutral text-sm">
-            No tasks yet.
-          </p>
+          <p className="text-neutral text-sm">No tasks yet.</p>
         )}
 
-        {tasks.map((t) => {
-          const isCompleted = t.status === 'completed'
+        {tasks.map((task) => {
+          const isCompleted = task.status === 'completed'
 
           return (
             <div
-              key={t.id}
+              key={task.id}
               className="flex items-center justify-between gap-4 border-b border-line pb-3"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <button
                   type="button"
-                  onClick={() => void handleToggleComplete(t)}
+                  onClick={() =>
+                    void handleToggleComplete(task.id)
+                  }
                   aria-label={
                     isCompleted
-                      ? `Mark ${t.title} as incomplete`
-                      : `Mark ${t.title} as complete`
+                      ? `Mark ${task.title} as incomplete`
+                      : `Mark ${task.title} as complete`
                   }
                   className={`flex h-5 w-5 shrink-0 items-center justify-center border border-ink text-xs transition ${
                     isCompleted
@@ -224,7 +220,7 @@ function Planner() {
 
                 <button
                   type="button"
-                  onClick={() => startEdit(t)}
+                  onClick={() => startEdit(task)}
                   className="min-w-0 text-left hover:opacity-70"
                 >
                   <p
@@ -234,15 +230,13 @@ function Planner() {
                         : ''
                     }`}
                   >
-                    {t.title}
+                    {task.title}
                   </p>
 
                   <p className="text-sm text-neutral">
-                    {t.date}{' '}
-                    {t.subject
-                      ? `— ${t.subject}`
-                      : ''}{' '}
-                    — {t.priority}
+                    {task.date}{' '}
+                    {task.subject ? `— ${task.subject}` : ''} —{' '}
+                    {task.priority}
                   </p>
                 </button>
               </div>
@@ -252,10 +246,10 @@ function Planner() {
                 onClick={() => {
                   if (
                     window.confirm(
-                      `Delete "${t.title}"?`,
+                      `Delete "${task.title}"?`,
                     )
                   ) {
-                    void handleDelete(t.id)
+                    void handleDelete(task.id)
                   }
                 }}
                 className="shrink-0 text-sm text-neutral hover:text-red-600"
