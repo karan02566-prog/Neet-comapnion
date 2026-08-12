@@ -62,6 +62,8 @@ function Dashboard() {
     let isMounted = true
 
     async function loadTasks() {
+      setIsLoading(true)
+
       const storedTasks = await taskRepository.getAll()
 
       if (isMounted) {
