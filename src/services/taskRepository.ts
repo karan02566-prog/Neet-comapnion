@@ -1,7 +1,25 @@
 import { getDB } from './db'
 import type { Task } from '../types/task'
 
+type TaskChangeListener = () => void
+
+const listeners = new Set<TaskChangeListener>()
+
+function notifyChanges() {
+  listeners.forEach((listener) => {
+    listener()
+  })
+}
+
 export const taskRepository = {
+  subscribeToChanges(listener: TaskChangeListener) {
+    listeners.add(listener)
+
+    return () => {
+      listeners.delete(listener)
+    }
+  },
+
   async getAll(): Promise<Task[]> {
     const db = await getDB()
     return db.getAll('tasks')
@@ -14,12 +32,18 @@ export const taskRepository = {
 
   async save(task: Task): Promise<void> {
     const db = await getDB()
+
     await db.put('tasks', task)
+
+    notifyChanges()
   },
 
   async remove(id: string): Promise<void> {
     const db = await getDB()
+
     await db.delete('tasks', id)
+
+    notifyChanges()
   },
 
   async toggleComplete(id: string): Promise<Task | null> {
@@ -46,6 +70,8 @@ export const taskRepository = {
     }
 
     await db.put('tasks', updatedTask)
+
+    notifyChanges()
 
     return updatedTask
   },

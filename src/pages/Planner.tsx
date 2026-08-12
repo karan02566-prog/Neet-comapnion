@@ -1,11 +1,42 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { motion, type Variants } from 'motion/react'
+import { Check, Pencil, Trash2 } from 'lucide-react'
 import { taskRepository } from '../services/taskRepository'
 import type { Task, Subject, TaskPriority } from '../types/task'
 
 const subjects: Subject[] = ['Physics', 'Chemistry', 'Biology']
 const priorities: TaskPriority[] = ['low', 'medium', 'high']
 
+const fadeUp: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 10,
+  },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      delay: i * 0.07,
+      ease: 'easeOut',
+    },
+  }),
+}
+
+function formatTaskDate(date: string): string {
+  const parsedDate = new Date(`${date}T00:00:00`)
+
+  return parsedDate.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 function Planner() {
+  const [searchParams, setSearchParams] = useSearchParams()
+
   const [tasks, setTasks] = useState<Task[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [title, setTitle] = useState('')
@@ -14,8 +45,44 @@ function Planner() {
   const [priority, setPriority] = useState<TaskPriority>('medium')
 
   useEffect(() => {
-    taskRepository.getAll().then(setTasks)
+    let isMounted = true
+
+    async function loadTasks() {
+      const storedTasks = await taskRepository.getAll()
+
+      if (isMounted) {
+        setTasks(storedTasks)
+      }
+    }
+
+    void loadTasks()
+
+    const unsubscribe = taskRepository.subscribeToChanges(() => {
+      void loadTasks()
+    })
+
+    return () => {
+      isMounted = false
+      unsubscribe()
+    }
   }, [])
+
+  useEffect(() => {
+    const requestedId = searchParams.get('edit')
+
+    if (!requestedId || tasks.length === 0) {
+      return
+    }
+
+    const requestedTask = tasks.find(
+      (task) => task.id === requestedId,
+    )
+
+    if (requestedTask) {
+      startEdit(requestedTask)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams, tasks])
 
   function resetForm() {
     setEditingId(null)
@@ -35,7 +102,10 @@ function Planner() {
 
   async function handleDelete(id: string) {
     await taskRepository.remove(id)
-    setTasks((prev) => prev.filter((task) => task.id !== id))
+
+    setTasks((prev) =>
+      prev.filter((task) => task.id !== id),
+    )
 
     if (editingId === id) {
       resetForm()
@@ -54,10 +124,6 @@ function Planner() {
         task.id === updatedTask.id ? updatedTask : task,
       ),
     )
-
-    if (editingId === id) {
-      resetForm()
-    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -70,7 +136,9 @@ function Planner() {
     const now = new Date().toISOString()
 
     if (editingId) {
-      const existing = tasks.find((task) => task.id === editingId)
+      const existing = tasks.find(
+        (task) => task.id === editingId,
+      )
 
       if (!existing) {
         return
@@ -112,153 +180,346 @@ function Planner() {
     resetForm()
   }
 
+  const sortedTasks = useMemo(
+    () =>
+      tasks
+        .slice()
+        .sort((a, b) => {
+          const dateCompare = a.date.localeCompare(b.date)
+
+          if (dateCompare !== 0) {
+            return dateCompare
+          }
+
+          return (a.startTime ?? '99:99').localeCompare(
+            b.startTime ?? '99:99',
+          )
+        }),
+    [tasks],
+  )
+
+  const completedCount = useMemo(
+    () =>
+      tasks.filter(
+        (task) => task.status === 'completed',
+      ).length,
+    [tasks],
+  )
+
   return (
-    <div className="px-6 py-10 md:px-10">
-      <h1 className="text-2xl font-bold mb-6">Planner</h1>
+    <div className="px-6 py-10 md:px-12 md:py-16">
+      <div className="grid gap-12 md:gap-16">
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-4 max-w-md mb-10"
-      >
-        <input
-          type="text"
-          placeholder="Task title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="border border-line px-3 py-2 bg-paper"
-        />
-
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="border border-line px-3 py-2 bg-paper"
-        />
-
-        <select
-          value={subject}
-          onChange={(e) =>
-            setSubject(e.target.value as Subject | '')
-          }
-          className="border border-line px-3 py-2 bg-paper"
+        {/* Header */}
+        <motion.section
+          className="grid gap-3"
+          custom={0}
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
         >
-          <option value="">No subject</option>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-neutral">
+            Study planning
+          </p>
 
-          {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+          <h1 className="text-5xl md:text-7xl font-semibold tracking-[-0.04em] leading-[0.9]">
+            PLAN
+            <br />
+            YOUR
+            <br />
+            DAY.
+          </h1>
 
-        <select
-          value={priority}
-          onChange={(e) =>
-            setPriority(e.target.value as TaskPriority)
-          }
-          className="border border-line px-3 py-2 bg-paper"
+          <p className="max-w-md pt-3 text-sm leading-6 text-neutral">
+            A quiet place to organise your study sessions,
+            one day at a time.
+          </p>
+        </motion.section>
+
+        <div className="h-px bg-line" />
+
+        {/* Planner form */}
+        <motion.section
+          className="grid gap-6 md:max-w-2xl"
+          custom={1}
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
         >
-          {priorities.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+          <div className="grid gap-1">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-accent">
+              {editingId ? 'Edit session' : 'New session'}
+            </p>
 
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            className="border border-ink px-4 py-2 hover:bg-ink hover:text-paper"
+            <p className="text-sm text-neutral">
+              {editingId
+                ? 'Make a small adjustment to your study plan.'
+                : 'Add something you want to accomplish.'}
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            className="grid gap-4"
           >
-            {editingId ? 'Update task' : 'Add task'}
-          </button>
+            <input
+              type="text"
+              placeholder="What are you studying?"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full border-b border-line bg-transparent px-0 py-3 text-base text-ink placeholder:text-neutral/60 focus:border-accent transition-colors"
+            />
 
-          {editingId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="border border-line px-4 py-2 text-neutral hover:text-ink"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <label className="grid gap-1">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-neutral">
+                  Date
+                </span>
 
-      <div className="flex flex-col gap-3">
-        {tasks.length === 0 && (
-          <p className="text-neutral text-sm">No tasks yet.</p>
-        )}
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="border-b border-line bg-transparent px-0 py-3 text-sm text-ink focus:border-accent transition-colors"
+                />
+              </label>
 
-        {tasks.map((task) => {
-          const isCompleted = task.status === 'completed'
+              <label className="grid gap-1">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-neutral">
+                  Subject
+                </span>
 
-          return (
-            <div
-              key={task.id}
-              className="flex items-center justify-between gap-4 border-b border-line pb-3"
-            >
-              <div className="flex items-center gap-3 min-w-0">
+                <select
+                  value={subject}
+                  onChange={(e) =>
+                    setSubject(
+                      e.target.value as Subject | '',
+                    )
+                  }
+                  className="border-b border-line bg-transparent px-0 py-3 text-sm text-ink focus:border-accent transition-colors"
+                >
+                  <option value="">General</option>
+
+                  {subjects.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-1">
+                <span className="text-[10px] uppercase tracking-[0.18em] text-neutral">
+                  Priority
+                </span>
+
+                <select
+                  value={priority}
+                  onChange={(e) =>
+                    setPriority(
+                      e.target.value as TaskPriority,
+                    )
+                  }
+                  className="border-b border-line bg-transparent px-0 py-3 text-sm text-ink focus:border-accent transition-colors"
+                >
+                  {priorities.map((p) => (
+                    <option key={p} value={p}>
+                      {p.charAt(0).toUpperCase() + p.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex items-center gap-3 pt-3">
+              <button
+                type="submit"
+                className="border border-accent bg-accent px-5 py-3 text-sm text-white transition-all duration-200 hover:bg-accent-deep hover:border-accent-deep"
+              >
+                {editingId ? 'Save changes' : 'Add session'}
+              </button>
+
+              {editingId && (
                 <button
                   type="button"
-                  onClick={() =>
-                    void handleToggleComplete(task.id)
-                  }
-                  aria-label={
-                    isCompleted
-                      ? `Mark ${task.title} as incomplete`
-                      : `Mark ${task.title} as complete`
-                  }
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center border border-ink text-xs transition ${
-                    isCompleted
-                      ? 'bg-ink text-paper'
-                      : 'bg-paper'
-                  }`}
+                  onClick={resetForm}
+                  className="px-4 py-3 text-sm text-neutral transition-colors hover:text-ink"
                 >
-                  {isCompleted ? '✓' : ''}
+                  Cancel
                 </button>
+              )}
+            </div>
+          </form>
+        </motion.section>
 
-                <button
-                  type="button"
-                  onClick={() => startEdit(task)}
-                  className="min-w-0 text-left hover:opacity-70"
-                >
-                  <p
-                    className={`font-medium ${
+        <div className="h-px bg-line" />
+
+        {/* Tasks */}
+        <motion.section
+          className="grid gap-6"
+          custom={2}
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className="flex items-end justify-between gap-4">
+            <div className="grid gap-1">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-neutral">
+                Your sessions
+              </p>
+
+              <p className="text-sm text-neutral">
+                {tasks.length === 0
+                  ? 'Nothing planned yet.'
+                  : `${tasks.length} ${
+                      tasks.length === 1
+                        ? 'session'
+                        : 'sessions'
+                    }`}
+              </p>
+            </div>
+
+            {tasks.length > 0 && (
+              <p className="text-[11px] uppercase tracking-[0.18em] text-neutral">
+                {completedCount}/{tasks.length} complete
+              </p>
+            )}
+          </div>
+
+          {tasks.length === 0 ? (
+            <div className="border border-dashed border-line px-6 py-10">
+              <p className="text-lg">
+                Your study plan is waiting.
+              </p>
+
+              <p className="mt-2 text-sm text-neutral">
+                Add your first session above.
+              </p>
+            </div>
+          ) : (
+            <div className="grid">
+              {sortedTasks.map((task, index) => {
+                const isCompleted =
+                  task.status === 'completed'
+
+                const isEditing =
+                  editingId === task.id
+
+                return (
+                  <motion.div
+                    key={task.id}
+                    custom={index + 3}
+                    variants={fadeUp}
+                    initial="hidden"
+                    animate="visible"
+                    className={`group grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line py-5 transition-opacity ${
                       isCompleted
-                        ? 'line-through opacity-50'
+                        ? 'opacity-55'
+                        : ''
+                    } ${
+                      isEditing
+                        ? 'bg-accent-soft/40'
                         : ''
                     }`}
                   >
-                    {task.title}
-                  </p>
+                    {/* Completion */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleToggleComplete(task.id)
+                      }
+                      aria-label={
+                        isCompleted
+                          ? `Mark ${task.title} as incomplete`
+                          : `Mark ${task.title} as complete`
+                      }
+                      className={`flex h-6 w-6 items-center justify-center rounded-full border transition-all duration-200 ${
+                        isCompleted
+                          ? 'border-accent bg-accent text-white'
+                          : 'border-line bg-paper text-transparent hover:border-accent'
+                      }`}
+                    >
+                      <Check
+                        size={13}
+                        strokeWidth={2}
+                      />
+                    </button>
 
-                  <p className="text-sm text-neutral">
-                    {task.date}{' '}
-                    {task.subject ? `— ${task.subject}` : ''} —{' '}
-                    {task.priority}
-                  </p>
-                </button>
-              </div>
+                    {/* Task information */}
+                    <button
+                      type="button"
+                      onClick={() => startEdit(task)}
+                      className="min-w-0 text-left"
+                    >
+                      <p
+                        className={`text-sm md:text-base transition-colors ${
+                          isCompleted
+                            ? 'line-through'
+                            : 'group-hover:text-accent'
+                        }`}
+                      >
+                        {task.title}
+                      </p>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      `Delete "${task.title}"?`,
-                    )
-                  ) {
-                    void handleDelete(task.id)
-                  }
-                }}
-                className="shrink-0 text-sm text-neutral hover:text-red-600"
-              >
-                Delete
-              </button>
+                      <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-neutral">
+                        <span>
+                          {formatTaskDate(task.date)}
+                        </span>
+
+                        <span>·</span>
+
+                        <span>
+                          {task.subject ?? 'General'}
+                        </span>
+
+                        <span>·</span>
+
+                        <span>
+                          {task.priority}
+                        </span>
+                      </div>
+                    </button>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(task)}
+                        aria-label={`Edit ${task.title}`}
+                        className="flex h-8 w-8 items-center justify-center text-neutral opacity-0 transition-all hover:text-accent group-hover:opacity-100 focus:opacity-100"
+                      >
+                        <Pencil
+                          size={14}
+                          strokeWidth={1.7}
+                        />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Delete "${task.title}"?`,
+                            )
+                          ) {
+                            void handleDelete(task.id)
+                          }
+                        }}
+                        aria-label={`Delete ${task.title}`}
+                        className="flex h-8 w-8 items-center justify-center text-neutral opacity-0 transition-all hover:text-red-500 group-hover:opacity-100 focus:opacity-100"
+                      >
+                        <Trash2
+                          size={14}
+                          strokeWidth={1.7}
+                        />
+                      </button>
+                    </div>
+                  </motion.div>
+                )
+              })}
             </div>
-          )
-        })}
+          )}
+        </motion.section>
       </div>
     </div>
   )

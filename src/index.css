@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #0a0a0a;
-  --color-paper: #faf9f6;
-  --color-neutral: #6b6b6b;
-  --color-line: #d9d8d3;
-  --color-accent: #d4491f;
+  --color-ink: #292526;
+  --color-paper: #fbf8f6;
+  --color-neutral: #827878;
+  --color-line: #e5dcda;
 
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --color-accent: #b87578;
+  --color-accent-soft: #f1e3e1;
+  --color-accent-deep: #8f5b5f;
+
+  --font-sans: "Inter", system-ui, sans-serif;
 
   --text-display: 5.5rem;
   --text-heading: 2.25rem;
@@ -15,16 +18,67 @@
   --text-caption: 0.6875rem;
 }
 
+:root {
+  color-scheme: light;
+}
+
+html {
+  background: var(--color-paper);
+  scroll-behavior: smooth;
+}
+
 body {
+  margin: 0;
+  min-width: 320px;
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+
+input::placeholder {
+  color: var(--color-neutral);
+  opacity: 0.7;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --text-display: 4rem;
+    --text-heading: 1.9rem;
+    --text-subheading: 1.15rem;
   }
 }
