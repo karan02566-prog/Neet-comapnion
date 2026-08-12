@@ -57,18 +57,28 @@ function formatStudyDate(date: string): string {
 function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     let isMounted = true
 
     async function loadTasks() {
       setIsLoading(true)
+      setLoadError(false)
 
-      const storedTasks = await taskRepository.getAll()
+      try {
+        const storedTasks = await taskRepository.getAll()
 
-      if (isMounted) {
-        setTasks(storedTasks)
-        setIsLoading(false)
+        if (isMounted) {
+          setTasks(storedTasks)
+          setIsLoading(false)
+        }
+      } catch {
+        if (isMounted) {
+          setTasks([])
+          setLoadError(true)
+          setIsLoading(false)
+        }
       }
     }
 
@@ -82,7 +92,15 @@ function Dashboard() {
   const today = getTodayDate()
 
   const todayTasks = useMemo(
-    () => tasks.filter((task) => task.date === today),
+    () =>
+      tasks
+        .filter((task) => task.date === today)
+        .slice()
+        .sort((a, b) =>
+          (a.startTime ?? '99:99').localeCompare(
+            b.startTime ?? '99:99',
+          ),
+        ),
     [tasks, today],
   )
 
@@ -95,13 +113,9 @@ function Dashboard() {
   )
 
   const nextTask = useMemo(() => {
-    return todayTasks
-      .filter((task) => task.status !== 'completed')
-      .sort((a, b) =>
-        (a.startTime ?? '99:99').localeCompare(
-          b.startTime ?? '99:99',
-        ),
-      )[0]
+    return todayTasks.find(
+      (task) => task.status !== 'completed',
+    )
   }, [todayTasks])
 
   const subjectTaskCounts = useMemo(() => {
@@ -130,7 +144,9 @@ function Dashboard() {
 
   const completionText = isLoading
     ? 'LOADING'
-    : `${completedToday} / ${todayTasks.length}`
+    : loadError
+      ? 'ERROR'
+      : `${completedToday} / ${todayTasks.length}`
 
   return (
     <div className="px-6 py-10 md:px-12 md:py-16 grid gap-12 md:gap-16">
@@ -176,7 +192,7 @@ function Dashboard() {
         <div>
           <Text variant="meta">Tasks remaining</Text>
           <Text variant="heading">
-            {isLoading
+            {isLoading || loadError
               ? '—'
               : todayTasks.length - completedToday}
           </Text>
@@ -185,7 +201,7 @@ function Dashboard() {
         <div>
           <Text variant="meta">Next session</Text>
 
-          {nextTask ? (
+          {nextTask && !loadError ? (
             <>
               <Text variant="heading">
                 {nextTask.startTime ?? 'OPEN'}
@@ -195,7 +211,9 @@ function Dashboard() {
               </Text>
             </>
           ) : (
-            <Text variant="heading">NONE</Text>
+            <Text variant="heading">
+              {loadError ? 'ERROR' : 'NONE'}
+            </Text>
           )}
         </div>
 
@@ -217,31 +235,37 @@ function Dashboard() {
       >
         <Text variant="meta">Task completion by subject</Text>
 
-        <div className="grid gap-3">
-          {subjectTaskCounts.map((subject) => (
-            <div
-              key={subject.name}
-              className="grid grid-cols-[70px_1fr_40px] items-center gap-3 sm:grid-cols-[100px_1fr_50px] sm:gap-4"
-            >
-              <Text variant="caption">
-                {subject.name}
-              </Text>
+        {loadError ? (
+          <Text variant="caption">
+            Task data could not be loaded.
+          </Text>
+        ) : (
+          <div className="grid gap-3">
+            {subjectTaskCounts.map((subject) => (
+              <div
+                key={subject.name}
+                className="grid grid-cols-[70px_1fr_40px] items-center gap-3 sm:grid-cols-[100px_1fr_50px] sm:gap-4"
+              >
+                <Text variant="caption">
+                  {subject.name}
+                </Text>
 
-              <div className="h-[2px] bg-line relative">
-                <div
-                  className="h-[2px] bg-ink absolute left-0 top-0 transition-all"
-                  style={{
-                    width: `${subject.progress}%`,
-                  }}
-                />
+                <div className="h-[2px] bg-line relative">
+                  <div
+                    className="h-[2px] bg-ink absolute left-0 top-0 transition-all"
+                    style={{
+                      width: `${subject.progress}%`,
+                    }}
+                  />
+                </div>
+
+                <Text variant="caption">
+                  {subject.progress}%
+                </Text>
               </div>
-
-              <Text variant="caption">
-                {subject.progress}%
-              </Text>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </motion.section>
 
       <Rule />
@@ -257,48 +281,64 @@ function Dashboard() {
         <Text variant="meta">Today's plan</Text>
 
         {isLoading ? (
-          <Text variant="caption">
-            Loading tasks...
-          </Text>
+          <div className="grid gap-1">
+            <Text variant="subheading">
+              Loading today's plan...
+            </Text>
+
+            <Text variant="caption">
+              Getting your latest study schedule.
+            </Text>
+          </div>
+        ) : loadError ? (
+          <div className="grid gap-1">
+            <Text variant="subheading">
+              Unable to load your tasks.
+            </Text>
+
+            <Text variant="caption">
+              Something went wrong while reading your study schedule.
+              Please try again.
+            </Text>
+          </div>
         ) : todayTasks.length === 0 ? (
-          <Text variant="subheading">
-            No tasks planned for today.
-          </Text>
+          <div className="grid gap-1">
+            <Text variant="subheading">
+              No tasks today.
+            </Text>
+
+            <Text variant="caption">
+              Your schedule is clear. Add your next study session in Planner.
+            </Text>
+          </div>
         ) : (
           <div className="grid gap-3">
-            {todayTasks
-              .slice()
-              .sort((a, b) =>
-                (a.startTime ?? '99:99').localeCompare(
-                  b.startTime ?? '99:99',
-                ),
-              )
-              .map((task) => (
-                <div
-                  key={task.id}
-                  className="grid grid-cols-[70px_1fr_auto] items-start gap-4 border-b border-line pb-3"
-                >
-                  <Text variant="caption">
-                    {task.startTime ?? '—'}
+            {todayTasks.map((task) => (
+              <div
+                key={task.id}
+                className="grid grid-cols-[70px_1fr_auto] items-start gap-4 border-b border-line pb-3"
+              >
+                <Text variant="caption">
+                  {task.startTime ?? '—'}
+                </Text>
+
+                <div>
+                  <Text variant="body">
+                    {task.title}
                   </Text>
 
-                  <div>
-                    <Text variant="body">
-                      {task.title}
-                    </Text>
-
-                    <Text variant="caption">
-                      {task.subject ?? 'General'}
-                    </Text>
-                  </div>
-
                   <Text variant="caption">
-                    {task.status === 'completed'
-                      ? 'DONE'
-                      : task.priority.toUpperCase()}
+                    {task.subject ?? 'General'}
                   </Text>
                 </div>
-              ))}
+
+                <Text variant="caption">
+                  {task.status === 'completed'
+                    ? 'DONE'
+                    : task.priority.toUpperCase()}
+                </Text>
+              </div>
+            ))}
           </div>
         )}
       </motion.section>
