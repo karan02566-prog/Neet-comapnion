@@ -13,6 +13,7 @@ import Notes from './pages/Notes'
 import Mistakes from './pages/Mistakes'
 import MockTests from './pages/MockTests'
 import Goals from './pages/Goals'
+import Progress from './pages/Progress'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
         <Route path="/mistakes" element={<Mistakes />} />
         <Route path="/mock-tests" element={<MockTests />} />
         <Route path="/goals" element={<Goals />} />
+        <Route path="/progress" element={<Progress />} />
 
         <Route
           path="*"

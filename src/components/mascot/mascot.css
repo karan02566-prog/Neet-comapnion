@@ -1,0 +1,168 @@
+.mascot-container {
+  width: 90px;
+  height: 120px;
+  pointer-events: none;
+}
+
+.mascot-button {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 90px;
+  height: 120px;
+  transform: translateX(-50%);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.mascot-image {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 82px;
+  height: auto;
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* WALK */
+
+.mascot-walk {
+  animation: bob-walk 0.55s infinite alternate ease-in-out;
+}
+
+@keyframes bob-walk {
+  from {
+    transform: translateX(-50%) translateY(0) rotate(-2deg);
+  }
+
+  to {
+    transform: translateX(-50%) translateY(-5px) rotate(2deg);
+  }
+}
+
+/* FUNNY / LAUGHING */
+
+.mascot-funny {
+  animation: bob-laugh 0.22s infinite alternate ease-in-out;
+}
+
+@keyframes bob-laugh {
+  from {
+    transform: translateX(-50%) rotate(-5deg) scale(1);
+  }
+
+  to {
+    transform: translateX(-50%) rotate(5deg) scale(1.04);
+  }
+}
+
+/* INTERACTING */
+
+.mascot-interact {
+  animation: bob-look 1.2s infinite ease-in-out;
+}
+
+@keyframes bob-look {
+  0%,
+  100% {
+    transform: translateX(-50%) translateX(0);
+  }
+
+  50% {
+    transform: translateX(-50%) translateX(8px);
+  }
+}
+
+/* REACTING */
+
+.mascot-react {
+  animation: bob-excited 0.35s infinite alternate ease-in-out;
+}
+
+@keyframes bob-excited {
+  from {
+    transform: translateX(-50%) translateY(0) rotate(-3deg);
+  }
+
+  to {
+    transform: translateX(-50%) translateY(-12px) rotate(3deg);
+  }
+}
+
+/* EXTREMELY STUPID */
+
+.mascot-stupid {
+  animation: bob-stupid 0.7s infinite;
+}
+
+@keyframes bob-stupid {
+  0% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+
+  20% {
+    transform: translateX(-50%) translateY(-18px) rotate(18deg);
+  }
+
+  40% {
+    transform: translateX(-50%) rotate(-22deg);
+  }
+
+  60% {
+    transform: translateX(-50%) translateY(-8px) rotate(28deg);
+  }
+
+  80% {
+    transform: translateX(-50%) rotate(-15deg);
+  }
+
+  100% {
+    transform: translateX(-50%) rotate(0deg);
+  }
+}
+
+/* SPEECH */
+
+.mascot-speech {
+  position: absolute;
+  bottom: 125px;
+  left: 50%;
+  z-index: 10;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border: 1px solid rgba(40, 35, 30, 0.12);
+  border-radius: 999px;
+  background: #fffdf8;
+  padding: 7px 12px;
+  color: #34312d;
+  font-size: 11px;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.1);
+  animation: speech-pop 0.18s ease-out;
+}
+
+@keyframes speech-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.8);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* REDUCED MOTION */
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-image,
+  .mascot-speech {
+    animation: none !important;
+  }
+}

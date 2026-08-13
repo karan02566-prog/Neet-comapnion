@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Nav from '../components/Nav'
 import Text from '../components/ui/Text'
+import Mascot from '../components/mascot/Mascot'
 
 function RootLayout() {
   return (
@@ -9,9 +10,13 @@ function RootLayout() {
         <Text variant="meta">NEET Study Companion</Text>
         <Nav />
       </header>
+
       <main className="flex-1">
         <Outlet />
       </main>
+
+      {/* Bob — global study companion */}
+      <Mascot />
     </div>
   )
 }

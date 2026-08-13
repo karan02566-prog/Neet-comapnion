@@ -7,6 +7,7 @@ const links = [
   { to: '/planner', label: 'Planner' },
   { to: '/focus', label: 'Focus' },
   { to: '/history', label: 'History' },
+  { to: '/progress', label: 'Progress' },
   { to: '/practice', label: 'Practice' },
   { to: '/syllabus', label: 'Syllabus' },
   { to: '/import', label: 'Import' },
@@ -87,4 +88,3 @@ function Nav() {
 }
 
 export default Nav
-
