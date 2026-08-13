@@ -11,6 +11,10 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/planner" element={<Planner />} />
         <Route path="/focus" element={<Focus />} />
+        <Route
+          path="*"
+          element={<Dashboard />}
+        />
       </Route>
     </Routes>
   )
