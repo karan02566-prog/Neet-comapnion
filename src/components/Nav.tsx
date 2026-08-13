@@ -13,6 +13,9 @@ const links = [
   { to: '/revision', label: 'Revision' },
   { to: '/flashcards', label: 'Flashcards' },
   { to: '/notes', label: 'Notes' },
+  { to: '/mistakes', label: 'Mistakes' },
+  { to: '/mock-tests', label: 'Mock Tests' },
+  { to: '/goals', label: 'Goals' },
 ]
 
 function Nav() {
@@ -84,3 +87,4 @@ function Nav() {
 }
 
 export default Nav
+

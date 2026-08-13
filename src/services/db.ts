@@ -3,7 +3,6 @@
   type DBSchema,
   type IDBPDatabase,
 } from 'idb'
-
 import type { Task } from '../types/task'
 import type { Session } from '../types/session'
 import type { Question } from '../types/question'
@@ -11,7 +10,9 @@ import type { Chapter } from '../types/chapter'
 import type { Revision } from '../types/revision'
 import type { Flashcard } from '../types/flashcard'
 import type { Note } from '../types/note'
-
+import type { Mistake } from '../types/mistake'
+import type { MockTest } from '../types/mockTest'
+import type { Goal } from '../types/goal'
 interface NeetDB extends DBSchema {
   tasks: {
     key: string
@@ -20,7 +21,6 @@ interface NeetDB extends DBSchema {
       'by-date': string
     }
   }
-
   sessions: {
     key: string
     value: Session
@@ -29,7 +29,6 @@ interface NeetDB extends DBSchema {
       'by-started-at': string
     }
   }
-
   questions: {
     key: string
     value: Question
@@ -40,7 +39,6 @@ interface NeetDB extends DBSchema {
       'by-source': string
     }
   }
-
   chapters: {
     key: string
     value: Chapter
@@ -48,7 +46,6 @@ interface NeetDB extends DBSchema {
       'by-subject': string
     }
   }
-
   revisions: {
     key: string
     value: Revision
@@ -59,7 +56,6 @@ interface NeetDB extends DBSchema {
       'by-next-due': string
     }
   }
-
   flashcards: {
     key: string
     value: Flashcard
@@ -70,7 +66,6 @@ interface NeetDB extends DBSchema {
       'by-next-review': string
     }
   }
-
   notes: {
     key: string
     value: Note
@@ -80,29 +75,49 @@ interface NeetDB extends DBSchema {
       'by-favorite': number
     }
   }
+  mistakes: {
+    key: string
+    value: Mistake
+    indexes: {
+      'by-subject': string
+      'by-chapter': string
+      'by-category': string
+      'by-review-status': string
+    }
+  }
+  mockTests: {
+    key: string
+    value: MockTest
+    indexes: {
+      'by-date': string
+    }
+  }
+  goals: {
+    key: string
+    value: Goal
+    indexes: {
+      'by-period': string
+    }
+  }
 }
-
 let dbInstance:
   Promise<IDBPDatabase<NeetDB>> | null = null
-
 export function getDB() {
   if (!dbInstance) {
     dbInstance = openDB<NeetDB>(
       'neet-study-companion',
-      7,
+      10,
       {
         upgrade(db, oldVersion) {
           if (oldVersion < 1) {
             const taskStore = db.createObjectStore('tasks', { keyPath: 'id' })
             taskStore.createIndex('by-date', 'date')
           }
-
           if (oldVersion < 2) {
             const sessionStore = db.createObjectStore('sessions', { keyPath: 'id' })
             sessionStore.createIndex('by-status', 'status')
             sessionStore.createIndex('by-started-at', 'startedAt')
           }
-
           if (oldVersion < 3) {
             const questionStore = db.createObjectStore('questions', { keyPath: 'id' })
             questionStore.createIndex('by-subject', 'subject')
@@ -110,12 +125,10 @@ export function getDB() {
             questionStore.createIndex('by-year', 'year')
             questionStore.createIndex('by-source', 'sourceType')
           }
-
           if (oldVersion < 4) {
             const chapterStore = db.createObjectStore('chapters', { keyPath: 'id' })
             chapterStore.createIndex('by-subject', 'subject')
           }
-
           if (oldVersion < 5) {
             const revisionStore = db.createObjectStore('revisions', { keyPath: 'id' })
             revisionStore.createIndex('by-subject', 'subject')
@@ -123,7 +136,6 @@ export function getDB() {
             revisionStore.createIndex('by-stage', 'stage')
             revisionStore.createIndex('by-next-due', 'nextDueAt')
           }
-
           if (oldVersion < 6) {
             const flashcardStore = db.createObjectStore('flashcards', { keyPath: 'id' })
             flashcardStore.createIndex('by-subject', 'subject')
@@ -131,17 +143,30 @@ export function getDB() {
             flashcardStore.createIndex('by-box', 'leitnerBox')
             flashcardStore.createIndex('by-next-review', 'nextReviewAt')
           }
-
           if (oldVersion < 7) {
             const noteStore = db.createObjectStore('notes', { keyPath: 'id' })
             noteStore.createIndex('by-subject', 'subject')
             noteStore.createIndex('by-chapter', 'chapter')
             noteStore.createIndex('by-favorite', 'favorite')
           }
+          if (oldVersion < 8) {
+            const mistakeStore = db.createObjectStore('mistakes', { keyPath: 'id' })
+            mistakeStore.createIndex('by-subject', 'subject')
+            mistakeStore.createIndex('by-chapter', 'chapter')
+            mistakeStore.createIndex('by-category', 'category')
+            mistakeStore.createIndex('by-review-status', 'reviewStatus')
+          }
+          if (oldVersion < 9) {
+            const mockTestStore = db.createObjectStore('mockTests', { keyPath: 'id' })
+            mockTestStore.createIndex('by-date', 'date')
+          }
+          if (oldVersion < 10) {
+            const goalStore = db.createObjectStore('goals', { keyPath: 'id' })
+            goalStore.createIndex('by-period', 'period')
+          }
         },
       },
     )
   }
-
   return dbInstance
 }

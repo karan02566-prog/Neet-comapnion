@@ -10,6 +10,9 @@ import ImportQuestions from './pages/ImportQuestions'
 import Revision from './pages/Revision'
 import Flashcards from './pages/Flashcards'
 import Notes from './pages/Notes'
+import Mistakes from './pages/Mistakes'
+import MockTests from './pages/MockTests'
+import Goals from './pages/Goals'
 
 function App() {
   return (
@@ -25,6 +28,9 @@ function App() {
         <Route path="/revision" element={<Revision />} />
         <Route path="/flashcards" element={<Flashcards />} />
         <Route path="/notes" element={<Notes />} />
+        <Route path="/mistakes" element={<Mistakes />} />
+        <Route path="/mock-tests" element={<MockTests />} />
+        <Route path="/goals" element={<Goals />} />
 
         <Route
           path="*"
@@ -36,3 +42,4 @@ function App() {
 }
 
 export default App
+
