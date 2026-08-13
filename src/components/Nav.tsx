@@ -5,6 +5,7 @@ import { Menu, X } from 'lucide-react'
 const links = [
   { to: '/', label: 'Dashboard' },
   { to: '/planner', label: 'Planner' },
+  { to: '/focus', label: 'Focus' },
 ]
 
 function Nav() {
@@ -23,7 +24,7 @@ function Nav() {
   return (
     <>
       {/* Desktop navigation */}
-      <nav className="hidden md:flex items-center gap-7">
+      <nav className="hidden items-center gap-7 md:flex">
         {links.map((link) => (
           <NavLink
             key={link.to}
@@ -38,12 +39,16 @@ function Nav() {
       {/* Mobile toggle */}
       <button
         type="button"
-        className="md:hidden flex h-9 w-9 items-center justify-center text-neutral transition-colors duration-200 hover:text-accent"
+        className="flex h-9 w-9 items-center justify-center text-neutral transition-colors duration-200 hover:text-accent md:hidden"
         aria-label={open ? 'Close menu' : 'Open menu'}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        {open ? <X size={19} strokeWidth={1.7} /> : <Menu size={19} strokeWidth={1.7} />}
+        {open ? (
+          <X size={19} strokeWidth={1.7} />
+        ) : (
+          <Menu size={19} strokeWidth={1.7} />
+        )}
       </button>
 
       {/* Mobile navigation */}
