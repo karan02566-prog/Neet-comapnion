@@ -75,4 +75,28 @@ export const taskRepository = {
 
     return updatedTask
   },
+
+  async moveToDate(
+    id: string,
+    date: string,
+  ): Promise<Task | null> {
+    const db = await getDB()
+    const task = await db.get('tasks', id)
+
+    if (!task) {
+      return null
+    }
+
+    const updatedTask: Task = {
+      ...task,
+      date,
+      updatedAt: new Date().toISOString(),
+    }
+
+    await db.put('tasks', updatedTask)
+
+    notifyChanges()
+
+    return updatedTask
+  },
 }

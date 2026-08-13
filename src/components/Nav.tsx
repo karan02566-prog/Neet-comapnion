@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 
@@ -6,6 +6,13 @@ const links = [
   { to: '/', label: 'Dashboard' },
   { to: '/planner', label: 'Planner' },
   { to: '/focus', label: 'Focus' },
+  { to: '/history', label: 'History' },
+  { to: '/practice', label: 'Practice' },
+  { to: '/syllabus', label: 'Syllabus' },
+  { to: '/import', label: 'Import' },
+  { to: '/revision', label: 'Revision' },
+  { to: '/flashcards', label: 'Flashcards' },
+  { to: '/notes', label: 'Notes' },
 ]
 
 function Nav() {
@@ -23,7 +30,6 @@ function Nav() {
 
   return (
     <>
-      {/* Desktop navigation */}
       <nav className="hidden items-center gap-7 md:flex">
         {links.map((link) => (
           <NavLink
@@ -36,7 +42,6 @@ function Nav() {
         ))}
       </nav>
 
-      {/* Mobile toggle */}
       <button
         type="button"
         className="flex h-9 w-9 items-center justify-center text-neutral transition-colors duration-200 hover:text-accent md:hidden"
@@ -51,7 +56,6 @@ function Nav() {
         )}
       </button>
 
-      {/* Mobile navigation */}
       {open && (
         <div className="absolute left-0 right-0 top-full z-50 border-b border-line bg-paper/95 px-6 py-5 backdrop-blur-sm md:hidden">
           <nav className="flex flex-col gap-5">

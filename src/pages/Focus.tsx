@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, type Variants } from 'motion/react'
 import {
   Volume2,
@@ -86,17 +86,8 @@ const timerPresets: TimerPreset[] = [
   },
 ]
 
-/*
-  Online royalty-free study music.
-
-  If the provider changes the file URL later,
-  only this constant needs to be changed.
-
-  The music is intentionally NOT stored locally,
-  so the project does not require public/audio/cozy-study.mp3.
-*/
 const MUSIC_URL =
-  'https://cdn.pixabay.com/audio/2025/07/15/audio_3b0f3e7d6f.mp3'
+  'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
 
 function formatTime(seconds: number): string {
   const safeSeconds = Math.max(
@@ -405,6 +396,12 @@ function Mascot({
 }
 
 function Focus() {
+  const [searchParams] =
+    useSearchParams()
+
+  const requestedTaskId =
+    searchParams.get('task')
+
   const [tasks, setTasks] =
     useState<Task[]>([])
 
@@ -451,9 +448,6 @@ function Focus() {
     setCycleNumber,
   ] = useState(1)
 
-  /*
-    Music state
-  */
   const audioRef =
     useRef<HTMLAudioElement | null>(
       null,
@@ -470,33 +464,92 @@ function Focus() {
   ] = useState(0.35)
 
   /*
-    Load tasks.
+    Load tasks and automatically
+    select the task supplied by Planner.
   */
   useEffect(() => {
-    taskRepository
-      .getAll()
-      .then(setTasks)
-      .catch(() => {
-        setTasks([])
-      })
-  }, [])
+    let isMounted = true
+
+    async function loadTasks() {
+      try {
+        const loadedTasks =
+          await taskRepository.getAll()
+
+        if (!isMounted) {
+          return
+        }
+
+        setTasks(loadedTasks)
+
+        if (requestedTaskId) {
+          const requestedTask =
+            loadedTasks.find(
+              (task) =>
+                task.id ===
+                requestedTaskId,
+            )
+
+          if (
+            requestedTask &&
+            requestedTask.status !==
+              'completed'
+          ) {
+            setTaskId(
+              requestedTask.id,
+            )
+
+            setSubject(
+              requestedTask.subject ?? '',
+            )
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setTasks([])
+        }
+      }
+    }
+
+    void loadTasks()
+
+    return () => {
+      isMounted = false
+    }
+  }, [requestedTaskId])
 
   /*
     Create audio once.
   */
   useEffect(() => {
-    const audio =
-      new Audio(MUSIC_URL)
+    const audio = new Audio()
 
+    audio.src = MUSIC_URL
     audio.loop = true
     audio.volume = volume
-    audio.preload = 'none'
+    audio.preload = 'auto'
+
+    const handleError = () => {
+      setMusicEnabled(false)
+    }
+
+    audio.addEventListener(
+      'error',
+      handleError,
+    )
 
     audioRef.current = audio
 
     return () => {
       audio.pause()
-      audio.src = ''
+
+      audio.removeEventListener(
+        'error',
+        handleError,
+      )
+
+      audio.removeAttribute('src')
+      audio.load()
+
       audioRef.current = null
     }
   }, [])
@@ -515,10 +568,6 @@ function Focus() {
 
   /*
     Timer engine.
-
-    Important:
-    We calculate elapsed time from Date.now()
-    rather than relying on setInterval accuracy.
   */
   useEffect(() => {
     if (
@@ -541,15 +590,11 @@ function Focus() {
 
       setElapsedSeconds(elapsed)
 
-      if (
-        timerMode === 'open'
-      ) {
+      if (timerMode === 'open') {
         return
       }
 
-      if (
-        timerPhase === 'work'
-      ) {
+      if (timerPhase === 'work') {
         const workSeconds =
           getWorkDurationSeconds()
 
@@ -726,9 +771,7 @@ function Focus() {
   function selectTimerMode(
     mode: TimerMode,
   ) {
-    if (
-      state !== 'idle'
-    ) {
+    if (state !== 'idle') {
       return
     }
 
@@ -802,15 +845,22 @@ function Focus() {
     }
 
     try {
+      if (!audio.src) {
+        audio.src = MUSIC_URL
+        audio.load()
+      }
+
+      audio.volume = volume
+
       await audio.play()
+
       setMusicEnabled(true)
-    } catch {
-      /*
-        Browser autoplay/security rules can
-        reject playback. Because this happens
-        after a button click, it should normally
-        be allowed.
-      */
+    } catch (error) {
+      console.error(
+        'Unable to play study music:',
+        error,
+      )
+
       setMusicEnabled(false)
     }
   }
@@ -856,12 +906,37 @@ function Focus() {
       newSession,
     )
 
+    /*
+      Mark the task as in-progress
+      as soon as its focus session starts.
+    */
+    if (selectedTask) {
+      await taskRepository.save({
+        ...selectedTask,
+        status: 'in-progress',
+        updatedAt: now,
+      })
+
+      setTasks((prev) =>
+        prev.map((task) =>
+          task.id ===
+          selectedTask.id
+            ? {
+                ...task,
+                status:
+                  'in-progress',
+                updatedAt: now,
+              }
+            : task,
+        ),
+      )
+    }
+
     setSession(
       newSession,
     )
 
     setCompletedSession(null)
-
     setElapsedSeconds(0)
     setTimerPhase('work')
     setCycleNumber(1)
@@ -993,6 +1068,52 @@ function Focus() {
       finishedSession,
     )
 
+    /*
+      If this session belongs to
+      a planned task, mark that task
+      as completed.
+    */
+    if (session.taskId) {
+      const allTasks =
+        await taskRepository.getAll()
+
+      const linkedTask =
+        allTasks.find(
+          (task) =>
+            task.id ===
+            session.taskId,
+        )
+
+      if (
+        linkedTask &&
+        linkedTask.status !==
+          'completed'
+      ) {
+        await taskRepository.save({
+          ...linkedTask,
+          status: 'completed',
+          completedAt: now,
+          updatedAt: now,
+        })
+
+        setTasks((prev) =>
+          prev.map((task) =>
+            task.id ===
+            linkedTask.id
+              ? {
+                  ...linkedTask,
+                  status:
+                    'completed',
+                  completedAt:
+                    now,
+                  updatedAt: now,
+                }
+              : task,
+          ),
+        )
+      }
+    }
+
     setCompletedSession(
       finishedSession,
     )
@@ -1122,8 +1243,8 @@ function Focus() {
                     : 'text-neutral'
                 }`}
               >
-                Choose your own
-                study duration.
+                Choose your own study
+                duration.
               </span>
             </button>
 
@@ -1141,9 +1262,7 @@ function Focus() {
                   value={
                     customMinutes
                   }
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     updateCustomMinutes(
                       Number(
                         event.target
@@ -1177,9 +1296,7 @@ function Focus() {
                     key={item}
                     type="button"
                     onClick={() => {
-                      setSubject(
-                        item,
-                      )
+                      setSubject(item)
                       setTaskId('')
                     }}
                     className={`border px-3 py-3 text-sm transition-colors ${
@@ -1245,6 +1362,7 @@ function Focus() {
               )}
             </div>
 
+            {/* Study Music */}
             <div className="border-t border-line pt-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -1315,9 +1433,7 @@ function Focus() {
                   max="1"
                   step="0.05"
                   value={volume}
-                  onChange={(
-                    event,
-                  ) =>
+                  onChange={(event) =>
                     setVolume(
                       Number(
                         event.target
@@ -1537,9 +1653,7 @@ function Focus() {
                     max="1"
                     step="0.05"
                     value={volume}
-                    onChange={(
-                      event,
-                    ) =>
+                    onChange={(event) =>
                       setVolume(
                         Number(
                           event.target
