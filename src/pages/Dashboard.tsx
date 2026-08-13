@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, type Variants } from 'motion/react'
-import { ArrowRight, Check } from 'lucide-react'
+import { ArrowRight, Check, Clock3 } from 'lucide-react'
 import Text from '../components/ui/Text'
 import Rule from '../components/ui/Rule'
 import { taskRepository } from '../services/taskRepository'
+import { sessionRepository } from '../services/sessionRepository'
 import type { Task } from '../types/task'
+import type { Session } from '../types/session'
 
 const fadeUp: Variants = {
   hidden: {
@@ -58,38 +60,64 @@ function formatStudyDate(date: string): string {
   })
 }
 
+function formatDuration(seconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(seconds))
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`
+  }
+
+  return `${minutes}m`
+}
+
+function formatSessionDate(date: string): string {
+  return new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+  })
+}
+
 function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
+
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     let isMounted = true
 
-    async function loadTasks() {
+    async function loadDashboard() {
       setIsLoading(true)
       setLoadError(false)
 
       try {
-        const storedTasks = await taskRepository.getAll()
+        const [storedTasks, storedSessions] = await Promise.all([
+          taskRepository.getAll(),
+          sessionRepository.getAll(),
+        ])
 
         if (isMounted) {
           setTasks(storedTasks)
+          setSessions(storedSessions)
           setIsLoading(false)
         }
       } catch {
         if (isMounted) {
           setTasks([])
+          setSessions([])
           setLoadError(true)
           setIsLoading(false)
         }
       }
     }
 
-    void loadTasks()
+    void loadDashboard()
 
     const unsubscribe = taskRepository.subscribeToChanges(() => {
-      void loadTasks()
+      void loadDashboard()
     })
 
     return () => {
@@ -128,6 +156,81 @@ function Dashboard() {
       ),
     [todayTasks],
   )
+
+  const completedSessions = useMemo(
+    () =>
+      sessions
+        .filter(
+          (session) =>
+            session.status === 'completed' &&
+            session.durationSeconds > 0,
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.startedAt).getTime() -
+            new Date(a.startedAt).getTime(),
+        ),
+    [sessions],
+  )
+
+  const todayFocusSeconds = useMemo(() => {
+    return completedSessions
+      .filter(
+        (session) =>
+          session.startedAt.slice(0, 10) === today,
+      )
+      .reduce(
+        (total, session) =>
+          total + session.durationSeconds,
+        0,
+      )
+  }, [completedSessions, today])
+
+  const totalFocusSeconds = useMemo(
+    () =>
+      completedSessions.reduce(
+        (total, session) =>
+          total + session.durationSeconds,
+        0,
+      ),
+    [completedSessions],
+  )
+
+  const recentSessions = useMemo(
+    () => completedSessions.slice(0, 5),
+    [completedSessions],
+  )
+
+  const subjectFocus = useMemo(
+    () =>
+      subjects.map((subject) => {
+        const subjectSessions = completedSessions.filter(
+          (session) => session.subject === subject,
+        )
+
+        const seconds = subjectSessions.reduce(
+          (total, session) =>
+            total + session.durationSeconds,
+          0,
+        )
+
+        return {
+          name: subject,
+          seconds,
+        }
+      }),
+    [completedSessions],
+  )
+
+  const strongestSubject = useMemo(() => {
+    return subjectFocus.reduce(
+      (best, current) =>
+        current.seconds > best.seconds
+          ? current
+          : best,
+      subjectFocus[0],
+    )
+  }, [subjectFocus])
 
   const subjectProgress = useMemo(
     () =>
@@ -188,7 +291,7 @@ function Dashboard() {
 
           <Text
             variant="display"
-            className="text-6xl md:text-8xl font-semibold tracking-[-0.055em]"
+            className="text-6xl font-semibold tracking-[-0.055em] md:text-8xl"
           >
             YOUR
             <br />
@@ -232,8 +335,8 @@ function Dashboard() {
             </Text>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 border-t border-line">
-            <div className="py-5 sm:pr-6 sm:border-r sm:border-line">
+          <div className="grid grid-cols-1 border-t border-line sm:grid-cols-3">
+            <div className="py-5 sm:border-r sm:border-line sm:pr-6">
               <Text variant="meta">Progress</Text>
 
               <div className="mt-2 flex items-baseline gap-2">
@@ -245,7 +348,7 @@ function Dashboard() {
               </div>
             </div>
 
-            <div className="py-5 sm:px-6 sm:border-r sm:border-line">
+            <div className="py-5 sm:border-r sm:border-line sm:px-6">
               <Text variant="meta">Remaining</Text>
 
               <Text variant="heading" className="mt-2">
@@ -279,10 +382,71 @@ function Dashboard() {
 
         <Rule />
 
+        {/* Focus statistics */}
+        <motion.section
+          className="grid gap-8"
+          custom={2}
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className="grid gap-1">
+            <Text variant="meta">Focus</Text>
+
+            <Text variant="subheading">
+              Your actual study time.
+            </Text>
+          </div>
+
+          <div className="grid grid-cols-1 border-t border-line sm:grid-cols-3">
+            <div className="py-5 sm:border-r sm:border-line sm:pr-6">
+              <Text variant="meta">Today</Text>
+
+              <Text variant="heading" className="mt-2">
+                {formatDuration(todayFocusSeconds)}
+              </Text>
+
+              <Text variant="caption">
+                focused today
+              </Text>
+            </div>
+
+            <div className="py-5 sm:border-r sm:border-line sm:px-6">
+              <Text variant="meta">All time</Text>
+
+              <Text variant="heading" className="mt-2">
+                {formatDuration(totalFocusSeconds)}
+              </Text>
+
+              <Text variant="caption">
+                across {completedSessions.length} sessions
+              </Text>
+            </div>
+
+            <div className="py-5 sm:pl-6">
+              <Text variant="meta">Strongest</Text>
+
+              <Text variant="heading" className="mt-2">
+                {strongestSubject?.seconds
+                  ? strongestSubject.name
+                  : '—'}
+              </Text>
+
+              <Text variant="caption">
+                {strongestSubject?.seconds
+                  ? `${formatDuration(strongestSubject.seconds)} focused`
+                  : 'Start a focus session'}
+              </Text>
+            </div>
+          </div>
+        </motion.section>
+
+        <Rule />
+
         {/* Subject progress */}
         <motion.section
           className="grid gap-7"
-          custom={2}
+          custom={3}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -347,7 +511,7 @@ function Dashboard() {
         {/* Today's plan */}
         <motion.section
           className="grid gap-6"
-          custom={3}
+          custom={4}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
@@ -361,7 +525,7 @@ function Dashboard() {
               </Text>
             </div>
 
-            <span className="hidden sm:block text-[11px] uppercase tracking-[0.18em] text-neutral">
+            <span className="hidden text-[11px] uppercase tracking-[0.18em] text-neutral sm:block">
               {todayTasks.length} sessions
             </span>
           </div>
@@ -401,14 +565,12 @@ function Dashboard() {
                 return (
                   <motion.div
                     key={task.id}
-                    custom={index + 4}
+                    custom={index + 5}
                     variants={fadeUp}
                     initial="hidden"
                     animate="visible"
                     className={`grid grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line py-5 ${
-                      isCompleted
-                        ? 'opacity-50'
-                        : ''
+                      isCompleted ? 'opacity-50' : ''
                     }`}
                   >
                     <div
@@ -457,10 +619,83 @@ function Dashboard() {
 
         <Rule />
 
+        {/* Recent focus sessions */}
+        <motion.section
+          className="grid gap-6"
+          custom={5}
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className="flex items-end justify-between gap-4">
+            <div className="grid gap-1">
+              <Text variant="meta">Recent focus</Text>
+
+              <Text variant="subheading">
+                Proof that you showed up.
+              </Text>
+            </div>
+
+            <Clock3
+              size={20}
+              strokeWidth={1.5}
+              className="text-accent"
+            />
+          </div>
+
+          {recentSessions.length === 0 ? (
+            <div className="border border-dashed border-line px-6 py-8">
+              <Text variant="body">
+                No completed focus sessions yet.
+              </Text>
+
+              <Text variant="caption">
+                Your first focused session will appear here.
+              </Text>
+            </div>
+          ) : (
+            <div className="grid">
+              {recentSessions.map((session, index) => (
+                <motion.div
+                  key={session.id}
+                  custom={index + 6}
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-line py-5"
+                >
+                  <div className="min-w-0">
+                    <Text variant="body">
+                      {session.chapter ??
+                        session.subject ??
+                        'General study'}
+                    </Text>
+
+                    <Text variant="caption">
+                      {session.subject ?? 'General'} ·{' '}
+                      {formatSessionDate(session.startedAt)}
+                    </Text>
+                  </div>
+
+                  <div className="text-right">
+                    <Text variant="heading">
+                      {formatDuration(
+                        session.durationSeconds,
+                      )}
+                    </Text>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.section>
+
+        <Rule />
+
         {/* Closing note */}
         <motion.section
           className="flex items-center justify-between gap-6 pb-4"
-          custom={4}
+          custom={6}
           variants={fadeUp}
           initial="hidden"
           animate="visible"
