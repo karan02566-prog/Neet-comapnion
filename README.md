@@ -1,30 +1,32 @@
 # NEET Companion
 
-**A focused, offline-first study system for NEET preparation — connecting planning, focused study, practice, mistakes, spaced revision, and performance analytics into one continuous learning loop.**
+A focused, offline-first study system for NEET preparation that connects planning, focused study, practice, mistake tracking, spaced revision, and performance analytics into one continuous learning loop.
 
-[![Live App](https://img.shields.io/badge/Live-App-111827?style=flat&logo=vercel&logoColor=white)](https://neet-nine-xi.vercel.app/) [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)](https://react.dev/) [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/) [![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat&logo=vite&logoColor=white)](https://vite.dev/) [![PWA](https://img.shields.io/badge/PWA-Offline--First-5A0FC8?style=flat&logo=pwa&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) [![Vercel](https://img.shields.io/badge/Deployed-Vercel-000000?style=flat&logo=vercel&logoColor=white)](https://vercel.com/) 
+[![Live App](https://img.shields.io/badge/Live-App-111827?style=flat&logo=vercel&logoColor=white)](https://neet-nine-xi.vercel.app/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=flat&logo=vite&logoColor=white)](https://vite.dev/)
+[![PWA](https://img.shields.io/badge/PWA-Offline--First-5A0FC8?style=flat&logo=pwa&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps)
+[![Vercel](https://img.shields.io/badge/Deployed-Vercel-000000?style=flat&logo=vercel&logoColor=white)](https://vercel.com/)
 
-**[🚀 Open the Live App](https://neet-nine-xi.vercel.app/)**
+**[Open the Live App](https://neet-nine-xi.vercel.app/)**
 
 ---
 
 ## Overview
 
-Most study trackers stop at **"mark topic as done."**
-
-NEET Companion is built around the actual preparation loop:
+Most study trackers stop at marking topics as complete. NEET Companion is built around the actual preparation loop:
 
 > **Plan → Focus → Practice → Make Mistakes → Revise → Measure → Improve**
 
-Every module feeds the next one.
+Every module feeds the next. Instead of treating studying, practice, revision, and analytics as separate features, NEET Companion connects them into a single system where the output of one activity becomes the input for the next.
 
-Instead of treating studying, practice, revision, and analytics as separate features, NEET Companion connects them into a single system where the output of one activity becomes the input for the next.
-
-The application is also **offline-first and local-first**: study data is stored directly in the browser using IndexedDB, so the core experience does not depend on a backend or an internet connection.
+The application is **offline-first and local-first**: study data is stored directly in the browser using IndexedDB, so the core experience does not depend on a backend or an internet connection.
 
 ---
 
 ## Core Learning Loop
+
 
 ```text
 
