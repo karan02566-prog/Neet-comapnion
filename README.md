@@ -1,6 +1,7 @@
 # NEET Companion
 
 A focused, offline-first study system for NEET preparation that connects planning, focused study, practice, mistake tracking, spaced revision, and performance analytics into one continuous learning loop.
+Soon gonna add maybe some new features.
 
 [![Live App](https://img.shields.io/badge/Live-App-111827?style=flat&logo=vercel&logoColor=white)](https://neet-nine-xi.vercel.app/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)](https://react.dev/)
